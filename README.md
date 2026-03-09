@@ -1,2 +1,36 @@
-# little-chatbot
-This is a little project that use the chat data with orthers to fine-tuning large models
+# little chatbot
+
+## 介绍
+这是一个基于python的聊天机器人训练框架，可以根据特定对话数据对LLM进行微调，使其能够展现出来对应对话中的风格  
+运行这个项目只需要一个**8G的4060显卡**，在消费级游戏本上是完全可以运行的，而且**训练时间不会很长**，只需要十几分钟
+
+
+
+## 使用指南
+### 第一步：准备数据
+你需要准备一个格式为csv的聊天数据（可以是从微信或者从QQ中导出的数据）格式如下![alt text](image.png)
+
+### 第二步：安装依赖
+你需要执行如下的指令,来安装依赖的库
+```python
+python -m pip install -r requirements.txt
+```
+### 第三步：训练模型
+你需要执行如下的指令,来训练模型
+```python
+python train.py
+```
+### 第四步：运行模型
+你需要执行如下的指令,来测试模型
+执行过训练模型的指令后文件夹中总共会两个运行文件：1，chat.py 2，chatsft.py  
+chat.py 是未经过训练的只加了系统提示词的聊天机器人，而chatsft.py 是经过对话数据sft训练过的聊天机器人。  
+运行第一个聊天机器人的指令如下
+```python
+python chat.py
+```
+运行第二个聊天机器人的指令如下
+```python
+python chatsft.py
+```
+## 后续工作
+之后会更新将这个聊天机器人给打包成一个exe文件，方便用户使用
