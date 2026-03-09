@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 # ================= 配置区域 =================
 INPUT_FILE = r'data\chat.csv'
-OUTPUT_FILE = r'data\finetune_liujiayan_v2.jsonl'
+OUTPUT_FILE = r'data\finetune_v2.jsonl'
 
 TARGET_NAME = '刘嘉岩'  # 模仿对象
 USER_NAME = 'XY. Lee'   # 用户
@@ -159,4 +159,5 @@ if __name__ == "__main__":
     for item in data[:5]:
         print(f"Q: {item['input']}")
         print(f"A: {item['output']}")
+
         print("-" * 30)
