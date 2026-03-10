@@ -20,39 +20,47 @@ def main():
     def process_func(example):
         MAX_LENGTH = config.MAX_SEQ_LENGTH
         
-        # 提取数据
         instruction = config.SYSTEM_PROMPT
         input_text = example['input']
         output_text = example['output']
 
-        # 构建符合 Qwen 格式的对话
-        messages = [
+        # A. 构建包含整个对话的消息
+        full_messages = [
             {"role": "system", "content": instruction},
             {"role": "user", "content": input_text},
             {"role": "assistant", "content": output_text}
         ]
         
-        # 使用 tokenizer 自动拼接 prompt
-        text = tokenizer.apply_chat_template(
-            messages, 
-            tokenize=False, 
-            add_generation_prompt=False
-        )
+        # B. 构建只包含“提问”部分的消息
+        prompt_messages = [
+            {"role": "system", "content": instruction},
+            {"role": "user", "content": input_text}
+        ]
+
+        # 1. 将全对话转为文本
+        full_text = tokenizer.apply_chat_template(full_messages, tokenize=False)
+        # 2. 将提问转为文本 (加上 add_generation_prompt=True 引导出 assistant)
+        prompt_text = tokenizer.apply_chat_template(prompt_messages, tokenize=False, add_generation_prompt=True)
+
+        # 3. 分别进行 Tokenize
+        full_tokens = tokenizer(full_text, truncation=True, max_length=MAX_LENGTH)
+        prompt_tokens = tokenizer(prompt_text, truncation=True, max_length=MAX_LENGTH)
+
+        # 4. 构建 Labels (核心中的核心)
+        input_ids = full_tokens["input_ids"]
+        prompt_len = len(prompt_tokens["input_ids"])
         
-        # 手动 Tokenize
-        tokenized = tokenizer(
-            text, 
-            truncation=True, 
-            max_length=MAX_LENGTH, 
-            padding=False,  # 稍后由 DataCollator 处理 padding
-            add_special_tokens=True
-        )
+        # 将前面的 prompt 部分全部遮罩为 -100
+        labels = [-100] * prompt_len + input_ids[prompt_len:]
         
-        # 设置 Labels (用于计算 Loss)
-        # 这里的简单做法是将 input_ids 复制一份作为 labels
-        tokenized["labels"] = tokenized["input_ids"].copy()
-        
-        return tokenized
+        # 为了防止截断导致的长度不一致，做一下对齐
+        labels = labels[:MAX_LENGTH]
+
+        return {
+            "input_ids": input_ids,
+            "attention_mask": full_tokens["attention_mask"],
+            "labels": labels
+        }
 
     # 2. 加载并处理数据集
     print(f"📂 正在加载数据: {config.DATA_PATH} ...")
@@ -106,4 +114,5 @@ def main():
     tokenizer.save_pretrained(config.OUTPUT_DIR)
 
 if __name__ == "__main__":
+
     main()
