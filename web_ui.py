@@ -3,6 +3,8 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 import gradio as gr
 import config  # 依赖你的 config.py
+import chromadb
+from chromadb.utils import embedding_functions
 
 print("="*50)
 print("🚀 正在启动 Web 服务，请稍候...")
@@ -18,8 +20,20 @@ base_model = AutoModelForCausalLM.from_pretrained(
 )
 
 print(f"🧩 正在挂载 LoRA 权重: {config.OUTPUT_DIR}")
-model = PeftModel.from_pretrained(base_model, config.OUTPUT_DIR)
+#model = PeftModel.from_pretrained(base_model, config.OUTPUT_DIR)
+model = base_model
 model.eval()
+
+client = chromadb.PersistentClient(path="./data/chroma_db")
+embedding_func = embedding_functions.SentenceTransformerEmbeddingFunction(model_name="BAAI/bge-m3")
+collection = client.get_collection(name="xiaoming_memory", embedding_function=embedding_func)
+
+def get_memory(query):
+    # 检索最相关的 3 条历史记录
+    results = collection.query(query_texts=[query], n_results=3)
+    # 将查到的内容拼成字符串
+    return "\n".join(results['documents'][0])
+
 
 # 2. 定义核心的对话推理函数
 def chat_with_model(message, history):
@@ -27,8 +41,14 @@ def chat_with_model(message, history):
     message: 当前用户输入的文字
     history: 之前的对话历史，格式为 [[用户话语1, AI话语1], [用户话语2, AI话语2], ...]
     """
+    # 核心修改：在生成回复前，先搜索相关记忆
+    memory = get_memory(message)
+    
+    # 将记忆作为“背景知识”注入给模型
+    rag_prompt = f"【重要】请严格根据以下历史对话记录来回答用户的问题。如果历史记录中找不到相关事实，请说明你不知道，不要自己编造。参考历史记录：{memory}"
+
     # 构建包含系统人设的初始消息
-    messages = [{"role": "system", "content": config.SYSTEM_PROMPT}]
+    messages = [{"role": "system", "content": config.SYSTEM_PROMPT + "\n" + rag_prompt}]
     
     # 拼接历史对话记录 (让模型有记忆)
     for user_msg, ai_msg in history:

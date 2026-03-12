@@ -3,3 +3,6 @@ pandas
 pytorch
 transformers
 peft
+chromadb 
+sentence-transformers
+gradio
